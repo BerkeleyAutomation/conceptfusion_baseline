@@ -63,9 +63,7 @@ if __name__ == "__main__":
 
     pointclouds = Pointclouds.load_pointcloud_from_h5(args.load_path)
     pointclouds.to(args.device)
-
     print(f"Map embeddings: {pointclouds.embeddings_padded.shape}")
-
     print(
         f"Initializing OpenCLIP model: {args.open_clip_model}"
         f" pre-trained on {args.open_clip_pretrained_dataset}..."

@@ -8,6 +8,8 @@ from pathlib import Path
 import PIL.Image as Image
 import torchvision.transforms as T
 from tqdm import tqdm
+import yaml
+
 
 
 from nerfstudio.utils.eval_utils import eval_setup
@@ -34,6 +36,8 @@ eval_names = [eval_paths[i].name for i in range(len(eval_paths))]
 
 os.makedirs(args.savedir + '/rgb', exist_ok=True)
 os.makedirs(args.savedir + '/depth', exist_ok=True)
+os.makedirs(args.savedir + '/rgb_out', exist_ok=True)
+
 data_paths = train_paths + eval_paths
 
 transform_file = open(args.transform)
@@ -41,8 +45,8 @@ data = json.load(transform_file)
 K = torch.tensor([[data['fl_x'], 0, data['cx']],
                   [0, data['fl_y'], data['cy']],
                   [0, 0, 1]])
-data = data['frames']
-f = open(args.savedir + "utensils.gt.sim", 'w')
+
+f = open(args.savedir + "/utensils.gt.sim", 'w')
 transforms = {}
 
 def visercam_to_ns(c2w):
@@ -53,8 +57,7 @@ def visercam_to_ns(c2w):
     return c2w
 
 
-# train_cameras = train_cameras[0:20]
-# eval_cameras = None
+# data = data['frames']
 
 # for entry in tqdm(data):
 #     transforms[entry['file_path']] = entry['transform_matrix']
@@ -74,10 +77,25 @@ def visercam_to_ns(c2w):
 
 # f.close()
 
-# for i, path in tqdm(enumerate(train_paths + eval_paths)):
-#     path = str(path.absolute())
-#     img = torchvision.io.read_image(path)
-#     torchvision.io.write_png(img, args.savedir + '/rgb/' + f"{i}.png")
+yml_path = open(args.savedir + "/icl.yaml", 'w')
+config = {'dataset_name': 'icl',
+          'camera_params': {
+              'image_height': data['h'],
+              'image_width' : data['w'],
+              'fx': data['fl_x'],
+                'fy': data['fl_y'],
+                'cx': data['cx'],
+                'cy': data['cy'],
+                'png_depth_scale': 1,
+                'crop_edge': 0
+          }
+          }
+yaml.dump(config, yml_path)
+
+for i, path in tqdm(enumerate(train_paths + eval_paths)):
+    path = str(path.absolute())
+    img = torchvision.io.read_image(path)
+    torchvision.io.write_png(img, args.savedir + '/rgb/' + f"{i}.png")
 
 for i in tqdm(range(len(train_cameras))):
     with torch.no_grad():
@@ -101,7 +119,7 @@ for i in tqdm(range(len(train_cameras))):
     img = outputs["rgb"].permute(2, 0 ,1).cpu()
     img = img*255 
     img = img.to(torch.uint8)
-    torchvision.io.write_png(img, args.savedir + '/rgb/' + f"{i}.png")
+    torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i}.png")
 
     distance = outputs["depth_med"]
     h, w, _ = distance.shape
@@ -148,7 +166,7 @@ for i in tqdm(range(len(eval_cameras))):
     img = outputs["rgb"].permute(2, 0, 1).cpu()
     img = img*255 
     img = img.to(torch.uint8)
-    torchvision.io.write_png(img, args.savedir + '/rgb/' + f"{i+len(train_cameras)}.png")
+    torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i+len(train_cameras)}.png")
 
     distance = outputs["depth_med"]
     h, w, _ = distance.shape

@@ -3,6 +3,7 @@ import pickle as pkl
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Union
+import argparse
 
 import cv2
 import matplotlib.pyplot as plt
@@ -29,13 +30,20 @@ from typing_extensions import Literal
 
 @dataclass
 class ProgramArgs:
+    parser = argparse.ArgumentParser(description='Extract conceptfusion features')
+    parser.add_argument('--data-dir', type=str, required=True)
+    parser.add_argument('--sequence', type=str, required=True)
+    args = parser.parse_args()
+    
+
     # Torch device to run computation on (E.g., "cpu")
     device: str = "cuda"
 
     # SAM checkpoint and model params
     checkpoint_path: Union[str, Path] = (
-        Path.home()
-        / "data"
+        Path()
+        / ".."
+        / ".."
         / "checkpoints"
         / "sam_vit_h_4b8939.pth"
     )
@@ -49,12 +57,16 @@ class ProgramArgs:
     mode: Literal["incremental", "batch"] = "incremental"
 
     # Path to the data config (.yaml) file
-    dataconfig_path: str = "dataconfigs/icl.yaml"
+    # dataconfig_path: str = "dataconfigs/icl.yaml"
+    dataconfig_path: str = str((Path(args.data_dir) /args.sequence / "icl.yaml").absolute())
     # Path to the dataset directory
-    data_dir: Union[str, Path] = Path.home() / "data" / "icl"
+    # data_dir: Union[str, Path] = Path.home() / "data" / "icl"
+    data_dir: Union[str, Path] = str(Path(args.data_dir).absolute())
     # Sequence from the dataset to load
     # sequence: Union[str, List[str]] = "living_room_traj1_frei_png"
-    sequence: Union[str, List[str]] = "utensils"
+    # sequence: Union[str, List[str]] = "utensils"
+    sequence: Union[str, List[str]] = args.sequence
+    
     # Start frame index
     start_idx: int = 0
     # End frame index

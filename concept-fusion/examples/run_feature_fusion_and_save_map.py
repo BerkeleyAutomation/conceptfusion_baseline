@@ -2,6 +2,7 @@
 Script to run feature fusion and save maps to disk.
 """
 
+import argparse
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
@@ -29,7 +30,10 @@ from typing_extensions import Literal
 @dataclass
 class ProgramArgs:
     """Commandline args for this script"""
-
+    parser = argparse.ArgumentParser(description='Create a map from a data')
+    parser.add_argument('--data-dir', type=str, required=True)
+    parser.add_argument('--sequence', type=str, required=True)
+    args = parser.parse_args()
     # Script mode
     # Determines whether the script extracts and saves features, or
     # loads the saved features and performs fusion
@@ -45,13 +49,15 @@ class ProgramArgs:
     device: str = "cuda:0"
 
     # Dataset args
-    # Path to config file
-    dataconfig_path: Union[str, Path] = Path("dataconfigs") / "icl.yaml"
-    # Path to base dir of dataset
-    dataset_path: Union[str, Path] = Path("~/data/icl").expanduser()
-    # trajectory to sample from
-    # sequence: Union[str, List[str]] = "living_room_traj1_frei_png"
-    sequence: Union[str, List[str]] = "utensils"
+    # Path to the data config (.yaml) file
+    # dataconfig_path: Union[str, Path] = Path("dataconfigs") / "icl.yaml"
+    dataconfig_path: Union[str, Path] = str((Path(args.data_dir) /args.sequence / "icl.yaml").absolute())
+    # Path to the dataset directory
+    # dataset_path: Union[str, Path] = Path("~/data/icl").expanduser()
+    dataset_path: Union[str, Path] = str(Path(args.data_dir).absolute())
+    # Sequence from the dataset to load
+    # # sequence: Union[str, List[str]] = "living_room_traj1_frei_png"
+    sequence: Union[str, List[str]] = args.sequence
     # length of sequence to sample (determined by start, end, and stride)
     frame_start: int = 0
     # frame_end: int = 115  # -1 to process until end of sequence
@@ -225,8 +231,8 @@ def run_fusion_and_save_map(args):
 
 
 if __name__ == "__main__":
-
-    args = tyro.cli(ProgramArgs)
+    # args = tyro.cli(ProgramArgs)
+    args = ProgramArgs()
 
     if args.mode == "extract":
         extract_and_save_features(args)
