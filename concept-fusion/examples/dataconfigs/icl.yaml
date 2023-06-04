@@ -1,0 +1,19 @@
+dataset_name: 'icl'
+camera_params:
+  # image_height: 480
+  # image_width: 640
+  # fx: 481.20
+  # fy: -480.0
+  # cx: 319.5
+  # cy: 239.5
+  
+  image_height: 896
+  image_width: 1600
+  fx: 1426.4286166188251
+  fy: 1424.975797115347
+  cx: 798.0496334804038
+  cy: 469.6107388826004
+  png_depth_scale: 1.0 #for depth image in png format
+  crop_edge: 0
+
+# "fl_x": 1426.4286166188251, "fl_y": 1424.975797115347, "cx": 798.0496334804038, "cy": 469.6107388826004, "h": 896, "w": 1600,
