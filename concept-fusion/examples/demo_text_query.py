@@ -130,8 +130,8 @@ if __name__ == "__main__":
         # Assign colors and display GUI
         pcd.colors = o3d.utility.Vector3dVector(map_colors)
         import trimesh as tr
-        pointcloud_tr = tr.PointCloud(np.asarray(pcd.points), np.asarray(pcd.colors))
-        lerf_pcd.points = o3d.utility.Vector3dVector(tr.transformations.transform_points(np.asarray(lerf_pcd.points), ns_wrapper.applied_transform)) #nerfstudio pc to world/viser pc
+        # pointcloud_tr = tr.PointCloud(np.asarray(pcd.points), np.asarray(pcd.colors))
+        lerf_pcd.points = o3d.utility.Vector3dVector(tr.transformations.transform_points(np.asarray(pcd.points), ns_wrapper.applied_transform)) #nerfstudio pc to world/viser pc
         lerf_xyz = np.asarray(lerf_pcd.points)
         lerf_points_o3d = lerf_pcd.points
 
