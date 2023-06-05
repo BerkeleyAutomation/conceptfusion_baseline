@@ -79,44 +79,53 @@ if __name__ == "__main__":
         # Prompt user whether or not to continue
         prompt_text = input("Type a prompt ('q' to quit): ")
         if prompt_text == "q":
-            break
+            exit()
+        prompt_text = prompt_text.strip()
+        queries = prompt_text.split(";")
+        
+        composited_rel = None
+        for prompt_text in queries:
+            text = tokenizer([prompt_text])
+            textfeat = model.encode_text(text.cuda())
+            textfeat = torch.nn.functional.normalize(textfeat, dim=-1)
+            textfeat = textfeat.unsqueeze(0)
 
-        text = tokenizer([prompt_text])
-        textfeat = model.encode_text(text.cuda())
-        textfeat = torch.nn.functional.normalize(textfeat, dim=-1)
-        textfeat = textfeat.unsqueeze(0)
+            # Normalize the map
+            map_embeddings = pointclouds.embeddings_padded.cuda()
+            map_embeddings_norm = torch.nn.functional.normalize(map_embeddings, dim=2)
+            print(f"map_embeddings_norm: {map_embeddings_norm.shape}")
+            print(f"textfeat: {textfeat.shape}")
 
-        # Normalize the map
-        map_embeddings = pointclouds.embeddings_padded.cuda()
-        map_embeddings_norm = torch.nn.functional.normalize(map_embeddings, dim=2)
-        print(f"map_embeddings_norm: {map_embeddings_norm.shape}")
-        print(f"textfeat: {textfeat.shape}")
+            cosine_similarity = torch.nn.CosineSimilarity(dim=-1)
 
-        cosine_similarity = torch.nn.CosineSimilarity(dim=-1)
-
-        similarity = cosine_similarity(
-            map_embeddings_norm, textfeat
-        )
-
-        pcd = pointclouds.open3d(0)
-        map_colors = np.asarray(pcd.colors)
-
-        if args.viz_type == "topk":
-            # Viz topk points
-            _, topk_ind = torch.topk(similarity, args.topk)
-            map_colors[topk_ind.detach().cpu().numpy()] = np.array([1.0, 0.5, 0.0])
-        elif args.viz_type == "thresh":
-            # Viz thresholded "relative" attention scores
-            similarity = (similarity + 1.0) / 2.0  # scale from [-1, 1] to [0, 1]
-            # similarity = similarity.clamp(0., 1.)
-            similarity_rel = (similarity - similarity.min()) / (
-                similarity.max() - similarity.min() + 1e-12
+            similarity = cosine_similarity(
+                map_embeddings_norm, textfeat
             )
-            similarity_rel[similarity_rel < args.similarity_thresh] = 0.0
-            cmap = matplotlib.cm.get_cmap("jet")
-            similarity_colormap = cmap(similarity_rel[0].detach().cpu().numpy())[:, :3]
-            print(map_colors.shape, similarity_colormap.shape)
-            map_colors = 0 * map_colors + 1 * similarity_colormap
+
+            pcd = pointclouds.open3d(0)
+            map_colors = np.asarray(pcd.colors)
+
+            if args.viz_type == "topk":
+                # Viz topk points
+                _, topk_ind = torch.topk(similarity, args.topk)
+                map_colors[topk_ind.detach().cpu().numpy()] = np.array([1.0, 0.5, 0.0])
+            elif args.viz_type == "thresh":
+                # Viz thresholded "relative" attention scores
+                similarity = (similarity + 1.0) / 2.0  # scale from [-1, 1] to [0, 1]
+                # similarity = similarity.clamp(0., 1.)
+                similarity_rel = (similarity - similarity.min()) / (
+                    similarity.max() - similarity.min() + 1e-12
+                )
+                similarity_rel[similarity_rel < args.similarity_thresh] = 0.0
+                if composited_rel is None:
+                    composited_rel = similarity_rel
+                else:
+                    composited_rel = composited_rel * similarity_rel
+        
+        cmap = matplotlib.cm.get_cmap("jet")
+        similarity_colormap = cmap(similarity_rel[0].detach().cpu().numpy())[:, :3]
+        print(map_colors.shape, similarity_colormap.shape)
+        map_colors = 0 * map_colors + 1 * similarity_colormap
 
         # Assign colors and display GUI
         pcd.colors = o3d.utility.Vector3dVector(map_colors)
