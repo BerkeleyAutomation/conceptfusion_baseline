@@ -14,7 +14,11 @@ def check_if_pt_in_bbox(pt, bbox):
         return True
     return False
 
-def grasps_in_image(image, grasps_world, pose):
+def grasps_in_image(image, grasps_world, cam2world):
+    world2cam = np.inverse(cam2world)
+    for grasp in grasps_world:
+        
+        grasp_pixel = np.matmul
     return grasps_pixel
 
 parser = argparse.ArgumentParser(description='Transforms a set of poses from one frame to another')
@@ -36,6 +40,10 @@ model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
 image = Image.open("./img9.png")
 texts = [["dish scrub brush", "dish scrub brush handle"]]#,"dust pan brush", "dust pan brush handle", "shiny black spoon handle", 
         #   "matte black spoon handle", "teapot", "matte black spoon handle"]]
+
+from graspnetAPI import GraspGroup
+grasps = GraspGroup().from_numpy("./scene_1_grasps.npy")
+
 grasps_world = [] #world grasps in xyz coords
 best_grasps_for_each_label = {}
 for image, pose in image_poses:
