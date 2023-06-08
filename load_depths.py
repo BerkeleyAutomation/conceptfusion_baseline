@@ -26,6 +26,7 @@ pipeline.model.eval()
 train_cameras = pipeline.datamanager.train_dataset.cameras
 train_cameras_optimizer = pipeline.datamanager.train_camera_optimizer
 dp_output = pipeline.datamanager.train_dataparser_outputs
+device = pipeline.device
 
 train_paths = pipeline.datamanager.train_dataset._dataparser_outputs.image_filenames
 train_names = [train_paths[i].name for i in range(len(train_paths))]
@@ -43,7 +44,7 @@ else:
 
 os.makedirs(args.savedir + '/rgb', exist_ok=True)
 os.makedirs(args.savedir + '/depth', exist_ok=True)
-os.makedirs(args.savedir + '/rgb_out', exist_ok=True)
+# os.makedirs(args.savedir + '/rgb_out', exist_ok=True)
 
 data_paths = train_paths + eval_paths
 
@@ -54,6 +55,7 @@ K = torch.tensor([[data['fl_x'], 0, data['cx']],
                   [0, 0, 1]])
 
 f = open(args.savedir + "/utensils.gt.sim", 'w')
+torch.save(K, args.savedir + "k.pt")
 transforms = {}
 
 def visercam_to_ns(c2w):
@@ -93,6 +95,7 @@ config = {'dataset_name': 'icl',
                 'fy': data['fl_y'],
                 'cx': data['cx'],
                 'cy': data['cy'],
+                # 'png_depth_scale': dp_output.dataparser_scale,
                 'png_depth_scale': 1,
                 'crop_edge': 0
           }
@@ -108,7 +111,7 @@ for i in tqdm(range(len(train_cameras))):
     with torch.no_grad():
         currcam = train_cameras[i]
         cam_opt = train_cameras_optimizer([i]).squeeze() #Transformation matrices from optimized camera coordinates to given camera coordinates (3, 4).
-        transformed_cam = torch.concat([currcam.camera_to_worlds.cuda(), torch.tensor([[0, 0, 0, 1]]).cuda()], axis=0) @ torch.concat([cam_opt, torch.tensor([[0, 0, 0, 1]]).cuda()], axis=0)
+        transformed_cam = torch.concat([currcam.camera_to_worlds.to(device), torch.tensor([[0, 0, 0, 1]]).to(device)], axis=0) @ torch.concat([cam_opt, torch.tensor([[0, 0, 0, 1]]).to(device)], axis=0)
         currcam.camera_to_worlds = transformed_cam[:3].cpu()
         bundle = currcam.generate_rays(camera_indices=0)
         bundle = bundle.to(pipeline.device)
@@ -126,9 +129,11 @@ for i in tqdm(range(len(train_cameras))):
     img = outputs["rgb"].permute(2, 0 ,1).cpu()
     img = img*255 
     img = img.to(torch.uint8)
-    torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i}.png")
+    # torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i}.png")
 
+    # distance = outputs["depth_med"] / dp_output.dataparser_scale
     distance = outputs["depth_med"]
+
     h, w, _ = distance.shape
     coords = np.ones((h, w, 3))
     coords[:, :, :2] = np.mgrid[:w, :h].T # (h, w, 2)
@@ -155,7 +160,7 @@ if eval_dataset is not None:
         with torch.no_grad():
             currcam = eval_cameras[i]
             cam_opt = eval_cameras_optimizer([i]).squeeze() #Transformation matrices from optimized camera coordinates to given camera coordinates (3, 4).
-            transformed_cam = torch.concat([currcam.camera_to_worlds.cuda(), torch.tensor([[0, 0, 0, 1]]).cuda()], axis=0) @ torch.concat([cam_opt, torch.tensor([[0, 0, 0, 1]]).cuda()], axis=0)
+            transformed_cam = torch.concat([currcam.camera_to_worlds.to(device), torch.tensor([[0, 0, 0, 1]]).to(device)], axis=0) @ torch.concat([cam_opt, torch.tensor([[0, 0, 0, 1]]).to(device)], axis=0)
             currcam.camera_to_worlds = transformed_cam[:3].cpu()
             bundle = currcam.generate_rays(camera_indices=0)
             bundle = bundle.to(pipeline.device)
@@ -170,11 +175,12 @@ if eval_dataset is not None:
         f.write('\n')
         f.write('\n')
 
-        img = outputs["rgb"].permute(2, 0, 1).cpu()
-        img = img*255 
-        img = img.to(torch.uint8)
-        torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i+len(train_cameras)}.png")
+        # img = outputs["rgb"].permute(2, 0, 1).cpu()
+        # img = img*255 
+        # img = img.to(torch.uint8)
+        # torchvision.io.write_png(img, args.savedir + '/rgb_out/' + f"{i+len(train_cameras)}.png")
 
+        # distance = outputs["depth_med"] / dp_output.dataparser_scale
         distance = outputs["depth_med"]
         h, w, _ = distance.shape
         coords = np.ones((h, w, 3))

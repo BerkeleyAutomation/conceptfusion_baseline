@@ -33,7 +33,9 @@ class ProgramArgs:
     parser = argparse.ArgumentParser(description='Create a map from a data')
     parser.add_argument('--data-dir', type=str, required=True)
     parser.add_argument('--sequence', type=str, required=True)
+    parser.add_argument('--savedir', type=str, required=True)
     args = parser.parse_args()
+    savedir = args.savedir
     # Script mode
     # Determines whether the script extracts and saves features, or
     # loads the saved features and performs fusion
@@ -144,6 +146,7 @@ def extract_and_save_features(args):
             args.feat_dir,
             os.path.splitext(os.path.basename(dataset.color_paths[idx]))[0] + ".pt",
         )
+        _savefile = args.savedir + "/" + _savefile
         torch.save(_feat.detach().cpu(), _savefile)
 
 
@@ -179,6 +182,7 @@ def run_fusion_and_save_map(args):
             args.feat_dir,
             os.path.splitext(os.path.basename(dataset.color_paths[idx]))[0] + ".pt",
         )
+        _loadfile = args.savedir + "/" + _loadfile
         _embedding = torch.load(_loadfile)
         _embedding = _embedding.float()
         _embedding = torch.nn.functional.interpolate(
@@ -214,6 +218,7 @@ def run_fusion_and_save_map(args):
         from autolab_core import RigidTransform
         R_180 = RigidTransform.x_axis_rotation(np.pi)
         _pose[:3, :3] = _pose[:3, :3] @ torch.Tensor(R_180).cuda()
+        print(f"Pose {idx}", _pose[:3, :3])
         frame_cur = RGBDImages(
             _color.unsqueeze(0).unsqueeze(0),
             _depth.unsqueeze(0).unsqueeze(0),
@@ -226,8 +231,10 @@ def run_fusion_and_save_map(args):
         # frame_prev = frame_cur
         torch.cuda.empty_cache()
 
-    os.makedirs(args.dir_to_save_map, exist_ok=True)
-    pointclouds.save_to_h5(args.dir_to_save_map)
+
+    _savefile = args.savedir + "/" + args.dir_to_save_map
+    os.makedirs(os.path.dirname(_savefile), exist_ok=True)
+    pointclouds.save_to_h5(_savefile)
 
 
 if __name__ == "__main__":

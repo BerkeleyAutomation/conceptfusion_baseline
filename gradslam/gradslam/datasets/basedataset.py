@@ -135,7 +135,11 @@ class GradSLAMDataset(torch.utils.data.Dataset):
 
         # self.transformed_poses = datautils.poses_to_transforms(self.poses)
         self.poses = torch.stack(self.poses)
-        self.transformed_poses = self._preprocess_poses(self.poses)
+        # print("Poses before preprocessing: ", self.poses)
+        # self.transformed_poses = self._preprocess_poses(self.poses)
+        self.transformed_poses = self.poses
+
+        # print("Poses after preprocessing: ", self.transformed_poses)
 
     def __len__(self):
         return self.num_imgs

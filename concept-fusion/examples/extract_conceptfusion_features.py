@@ -33,17 +33,18 @@ class ProgramArgs:
     parser = argparse.ArgumentParser(description='Extract conceptfusion features')
     parser.add_argument('--data-dir', type=str, required=True)
     parser.add_argument('--sequence', type=str, required=True)
+    parser.add_argument('--savedir', type=str, required=True)
     args = parser.parse_args()
-    
+    savedir = args.savedir
 
     # Torch device to run computation on (E.g., "cpu")
     device: str = "cuda"
 
     # SAM checkpoint and model params
     checkpoint_path: Union[str, Path] = (
-        Path()
-        / ".."
-        / ".."
+        Path.home()
+        / "Documents"
+        / "conceptfusion_baseline"
         / "checkpoints"
         / "sam_vit_h_4b8939.pth"
     )
@@ -80,12 +81,12 @@ class ProgramArgs:
     desired_width: int = 160
 
     # CLIP model config
-    # open_clip_model = "ViT-H-14"
-    # open_clip_pretrained_dataset = "laion2b_s32b_b79k"
+    open_clip_model = "ViT-H-14"
+    open_clip_pretrained_dataset = "laion2b_s32b_b79k"
 
     #LERF CLLIP model config
-    open_clip_model="ViT-B-16"
-    open_clip_pretrained_dataset="laion2b_s34b_b88k"
+    # open_clip_model="ViT-B-16"
+    # open_clip_pretrained_dataset="laion2b_s34b_b88k"
 
     # Directory to save extracted features
     save_dir: str = "saved-feat"
@@ -110,7 +111,8 @@ def main():
 
     torch.autograd.set_grad_enabled(False)
 
-    args = tyro.cli(ProgramArgs)
+    # args = tyro.cli(ProgramArgs)
+    args = ProgramArgs()
     
     # dataconfig = load_dataset_config(args.dataconfig_path)
     dataset = get_dataset(
@@ -147,6 +149,8 @@ def main():
             args.save_dir,
             os.path.splitext(os.path.basename(dataset.color_paths[idx]))[0] + ".pkl",
         )
+        _savefile = args.savedir + "/" + _savefile
+        os.makedirs(os.path.dirname(_savefile), exist_ok=True)
         with open(_savefile, "wb") as f:
             pkl.dump(masks, f, protocol=pkl.HIGHEST_PROTOCOL)
 
@@ -166,6 +170,7 @@ def main():
             args.save_dir,
             os.path.splitext(os.path.basename(dataset.color_paths[idx]))[0] + ".pkl",
         )
+        maskfile = args.savedir + "/" + maskfile
         with open(maskfile, "rb") as f:
             masks = pkl.load(f)
         
@@ -253,6 +258,7 @@ def main():
             args.save_dir,
             os.path.splitext(os.path.basename(dataset.color_paths[idx]))[0] + ".pt",
         )
+        savefile = args.savedir + "/" + savefile
         torch.save(outfeat.detach().cpu(), savefile)
         
 
